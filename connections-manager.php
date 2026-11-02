@@ -320,6 +320,11 @@ function cmgr_known_services() {
 		'graph.facebook.com'       => array( 'name' => 'Meta Graph', 'expects_pii' => true, 'category' => 'advertising' ),
 		'public-api.wordpress.com' => array( 'name' => 'WordPress.com', 'expects_pii' => false, 'category' => 'platform' ),
 		'jetpack.wordpress.com'    => array( 'name' => 'Jetpack', 'expects_pii' => false, 'category' => 'platform' ),
+		'wordpress.com'            => array( 'name' => 'WordPress.com', 'expects_pii' => false, 'category' => 'platform' ),
+		'wp.com'                   => array( 'name' => 'WordPress.com', 'expects_pii' => false, 'category' => 'platform' ),
+		'pixel.wp.com'             => array( 'name' => 'Jetpack Stats', 'expects_pii' => true, 'category' => 'analytics' ),
+		'api.bruteprotect.com'     => array( 'name' => 'Jetpack Protect', 'expects_pii' => true, 'category' => 'security' ),
+		'rest.akismet.com'         => array( 'name' => 'Akismet', 'expects_pii' => true, 'category' => 'security' ),
 	);
 
 	/**
