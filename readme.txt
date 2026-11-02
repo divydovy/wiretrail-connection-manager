@@ -1,5 +1,5 @@
 === Connections Manager ===
-Contributors: automattic
+Contributors: divydovy
 Tags: privacy, monitoring, http, integrations, gdpr
 Requires at least: 6.5
 Tested up to: 7.1
