@@ -4,7 +4,7 @@ Tags: privacy, monitoring, http, integrations, gdpr
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -66,5 +66,9 @@ Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities 
 
 == Changelog ==
 
+= 0.2.0 =
+* New: read-only Abilities (`get-issues`, `list-connections`, `get-recent-requests`) so AI agents can report connection problems. WordPress 6.9+.
+* Fix: WordPress.com, Jetpack Stats, Jetpack Protect, and Akismet are recognised services, so Jetpack's own requests no longer raise "unrecognised host" alerts.
+
 = 0.1.0 =
-* First release: detected connections, health, personal data checks, the Connectors screen integration, and read-only Abilities for AI agents.
+* First release: detected connections, health, personal data checks, and the Connectors screen integration.

@@ -3,7 +3,7 @@
  * Plugin Name:       Connections Manager
  * Plugin URI:        https://github.com/Automattic/connection-manager
  * Description:       See which plugins and themes on your site talk to which third-party services, how healthy those connections are, and whether personal data is being sent.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Author:            Automattic
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 // Constants
 // ---------------------------------------------------------------------------
 
-define( 'CMGR_VERSION', '0.1.0' );
+define( 'CMGR_VERSION', '0.2.0' );
 define( 'CMGR_SCHEMA_VERSION', '1' );
 define( 'CMGR_PLUGIN_SLUG', basename( __DIR__ ) );
 define( 'CMGR_MAX_SCAN_SIZE', 10 * 1024 ); // Only the first 10 KB of a request body is scanned.
