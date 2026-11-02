@@ -1102,6 +1102,371 @@ function cmgr_get_connectors_page_module_data( $data ) {
 }
 
 // ---------------------------------------------------------------------------
+// Abilities (agent access)
+// ---------------------------------------------------------------------------
+
+define( 'CMGR_SLOW_REQUEST_MS', 2000 );
+
+add_action( 'wp_abilities_api_categories_init', 'cmgr_register_ability_category' );
+
+function cmgr_register_ability_category() {
+	if ( ! function_exists( 'wp_register_ability_category' ) ) {
+		return;
+	}
+
+	wp_register_ability_category(
+		'connections-manager',
+		array(
+			'label'       => __( 'Connections Manager', 'connections-manager' ),
+			'description' => __( 'Outbound connections made by plugins, themes, and WordPress to third-party services.', 'connections-manager' ),
+		)
+	);
+}
+
+add_action( 'wp_abilities_api_init', 'cmgr_register_abilities' );
+
+function cmgr_register_abilities() {
+	if ( ! function_exists( 'wp_register_ability' ) ) {
+		return;
+	}
+
+	$meta = array(
+		'annotations' => array(
+			'readonly'    => true,
+			'destructive' => false,
+			'idempotent'  => true,
+		),
+		'public'      => true,
+		'mcp'         => array( 'public' => true ),
+	);
+
+	$hours_schema = array(
+		'type'        => 'integer',
+		'minimum'     => 1,
+		'maximum'     => 24 * 30,
+		'default'     => 24,
+		'description' => __( 'How many hours back to look.', 'connections-manager' ),
+	);
+
+	wp_register_ability(
+		'connections-manager/get-issues',
+		array(
+			'label'               => __( 'Get connection issues', 'connections-manager' ),
+			'description'         => __( 'Reports what needs attention in this site\'s outbound connections to third-party services: unacknowledged alerts (personal data sent to unrecognised or unexpected services, repeated failures), connections that returned errors, and connections that were slow. Use this to answer "is anything wrong with my integrations?" or "is any plugin leaking personal data?".', 'connections-manager' ),
+			'category'            => 'connections-manager',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'hours' => $hours_schema,
+				),
+				'additionalProperties' => false,
+				'default'              => array(),
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'status'              => array(
+						'type' => 'string',
+						'enum' => array( 'ok', 'attention' ),
+					),
+					'window_hours'        => array( 'type' => 'integer' ),
+					'summary'             => array( 'type' => 'object' ),
+					'alerts'              => array( 'type' => 'array' ),
+					'failing_connections' => array( 'type' => 'array' ),
+					'slow_connections'    => array( 'type' => 'array' ),
+				),
+			),
+			'execute_callback'    => 'cmgr_ability_get_issues',
+			'permission_callback' => 'cmgr_ability_permission',
+			'meta'                => $meta,
+		)
+	);
+
+	wp_register_ability(
+		'connections-manager/list-connections',
+		array(
+			'label'               => __( 'List detected connections', 'connections-manager' ),
+			'description'         => __( 'Lists every third-party service this site has talked to within the retention period, grouped by the plugin or theme that made the requests, with request counts, errors, average latency, and how many requests contained personal data. Source "wp-core" means WordPress itself or code outside a plugin or theme directory.', 'connections-manager' ),
+			'category'            => 'connections-manager',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'source_plugin' => array(
+						'type'        => 'string',
+						'description' => __( 'Only include connections made by this plugin or theme slug.', 'connections-manager' ),
+					),
+					'host'          => array(
+						'type'        => 'string',
+						'description' => __( 'Only include connections to this host.', 'connections-manager' ),
+					),
+				),
+				'additionalProperties' => false,
+				'default'              => array(),
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'connections' => array( 'type' => 'array' ),
+				),
+			),
+			'execute_callback'    => 'cmgr_ability_list_connections',
+			'permission_callback' => 'cmgr_ability_permission',
+			'meta'                => $meta,
+		)
+	);
+
+	wp_register_ability(
+		'connections-manager/get-recent-requests',
+		array(
+			'label'               => __( 'Get recent outbound requests', 'connections-manager' ),
+			'description'         => __( 'Returns individual recent outbound requests, newest first, with status, timing, error message, and the types of personal data detected. URLs have secrets and personal data redacted. Use this to dig into a failing or suspicious connection found by get-issues.', 'connections-manager' ),
+			'category'            => 'connections-manager',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'host'               => array(
+						'type'        => 'string',
+						'description' => __( 'Only include requests to this host.', 'connections-manager' ),
+					),
+					'source_plugin'      => array(
+						'type'        => 'string',
+						'description' => __( 'Only include requests made by this plugin or theme slug.', 'connections-manager' ),
+					),
+					'errors_only'        => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'personal_data_only' => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'limit'              => array(
+						'type'    => 'integer',
+						'minimum' => 1,
+						'maximum' => 100,
+						'default' => 25,
+					),
+				),
+				'additionalProperties' => false,
+				'default'              => array(),
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'requests' => array( 'type' => 'array' ),
+				),
+			),
+			'execute_callback'    => 'cmgr_ability_get_recent_requests',
+			'permission_callback' => 'cmgr_ability_permission',
+			'meta'                => $meta,
+		)
+	);
+}
+
+function cmgr_ability_permission() {
+	return current_user_can( 'manage_options' );
+}
+
+function cmgr_ability_time( $gmt_datetime ) {
+	return $gmt_datetime ? gmdate( 'c', strtotime( $gmt_datetime . ' UTC' ) ) : null;
+}
+
+function cmgr_ability_get_issues( $input = array() ) {
+	global $wpdb;
+
+	$hours = isset( $input['hours'] ) ? max( 1, (int) $input['hours'] ) : 24;
+	$since = gmdate( 'Y-m-d H:i:s', time() - $hours * HOUR_IN_SECONDS );
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$alert_rows = $wpdb->get_results(
+		$wpdb->prepare(
+			'SELECT type, severity, message, target_host, source_plugin, created_at
+			FROM %i
+			WHERE acknowledged = 0 AND created_at >= %s
+			ORDER BY id DESC
+			LIMIT 50',
+			cmgr_alerts_table(),
+			$since
+		),
+		ARRAY_A
+	);
+
+	$alerts = array();
+	foreach ( $alert_rows as $row ) {
+		$alerts[] = array(
+			'type'          => $row['type'],
+			'severity'      => $row['severity'],
+			'message'       => $row['message'],
+			'host'          => $row['target_host'],
+			'source_plugin' => $row['source_plugin'],
+			'created_at'    => cmgr_ability_time( $row['created_at'] ),
+		);
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$connection_rows = $wpdb->get_results(
+		$wpdb->prepare(
+			'SELECT source_plugin, target_host, COUNT(*) AS requests, SUM(is_error) AS errors, AVG(NULLIF(duration_ms, 0)) AS avg_latency, MAX(CASE WHEN is_error = 1 THEN created_at END) AS last_error_at
+			FROM %i
+			WHERE created_at >= %s
+			GROUP BY source_plugin, target_host',
+			cmgr_events_table(),
+			$since
+		),
+		ARRAY_A
+	);
+
+	$failing = array();
+	$slow    = array();
+	foreach ( $connection_rows as $row ) {
+		$requests = (int) $row['requests'];
+		$errors   = (int) $row['errors'];
+		$latency  = isset( $row['avg_latency'] ) ? (int) round( $row['avg_latency'] ) : 0;
+
+		if ( $errors > 0 ) {
+			$failing[] = array(
+				'source_plugin' => $row['source_plugin'],
+				'host'          => $row['target_host'],
+				'requests'      => $requests,
+				'errors'        => $errors,
+				'error_rate'    => round( $errors / max( 1, $requests ), 3 ),
+				'last_error'    => cmgr_ability_last_error( $row['source_plugin'], $row['target_host'] ),
+				'last_error_at' => cmgr_ability_time( $row['last_error_at'] ),
+			);
+		}
+
+		if ( $latency >= CMGR_SLOW_REQUEST_MS ) {
+			$slow[] = array(
+				'source_plugin'  => $row['source_plugin'],
+				'host'           => $row['target_host'],
+				'requests'       => $requests,
+				'avg_latency_ms' => $latency,
+			);
+		}
+	}
+
+	usort(
+		$failing,
+		static function ( $a, $b ) {
+			return $b['errors'] <=> $a['errors'];
+		}
+	);
+	usort(
+		$slow,
+		static function ( $a, $b ) {
+			return $b['avg_latency_ms'] <=> $a['avg_latency_ms'];
+		}
+	);
+
+	return array(
+		'status'              => ( $alerts || $failing || $slow ) ? 'attention' : 'ok',
+		'window_hours'        => $hours,
+		'summary'             => cmgr_get_stats(),
+		'alerts'              => $alerts,
+		'failing_connections' => $failing,
+		'slow_connections'    => $slow,
+	);
+}
+
+function cmgr_ability_last_error( $source_plugin, $host ) {
+	global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$row = $wpdb->get_row(
+		$wpdb->prepare(
+			'SELECT response_status, error FROM %i WHERE source_plugin = %s AND target_host = %s AND is_error = 1 ORDER BY id DESC LIMIT 1',
+			cmgr_events_table(),
+			$source_plugin,
+			$host
+		),
+		ARRAY_A
+	);
+
+	if ( ! $row ) {
+		return '';
+	}
+
+	return $row['error'] ? $row['error'] : sprintf( 'HTTP %d', (int) $row['response_status'] );
+}
+
+function cmgr_ability_list_connections( $input = array() ) {
+	$source = isset( $input['source_plugin'] ) ? (string) $input['source_plugin'] : '';
+	$host   = isset( $input['host'] ) ? strtolower( (string) $input['host'] ) : '';
+
+	$connections = array();
+	foreach ( cmgr_get_detected_integrations() as $row ) {
+		if ( ( '' !== $source && $row['source_plugin'] !== $source ) || ( '' !== $host && $row['target_host'] !== $host ) ) {
+			continue;
+		}
+
+		$host_info     = cmgr_lookup_host( $row['target_host'] );
+		$connections[] = array(
+			'source_plugin'          => $row['source_plugin'],
+			'host'                   => $row['target_host'],
+			'service_name'           => ! empty( $host_info['known'] ) ? $host_info['name'] : null,
+			'recognised_service'     => ! empty( $host_info['known'] ),
+			'expects_personal_data'  => ! empty( $host_info['expects_pii'] ),
+			'requests'               => (int) $row['requests'],
+			'errors'                 => (int) $row['errors'],
+			'personal_data_requests' => (int) $row['pii'],
+			'avg_latency_ms'         => isset( $row['avg_latency'] ) ? (int) round( $row['avg_latency'] ) : 0,
+			'last_seen'              => cmgr_ability_time( $row['last_seen'] ),
+		);
+	}
+
+	return array( 'connections' => $connections );
+}
+
+function cmgr_ability_get_recent_requests( $input = array() ) {
+	global $wpdb;
+
+	$host   = isset( $input['host'] ) ? strtolower( (string) $input['host'] ) : '';
+	$source = isset( $input['source_plugin'] ) ? (string) $input['source_plugin'] : '';
+	$limit  = isset( $input['limit'] ) ? min( 100, max( 1, (int) $input['limit'] ) ) : 25;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$rows = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT source_plugin, target_host, target_url, method, response_status, duration_ms, error, pii_types, created_at
+			FROM %i
+			WHERE ( %s = '' OR target_host = %s )
+				AND ( %s = '' OR source_plugin = %s )
+				AND ( %d = 0 OR is_error = 1 )
+				AND ( %d = 0 OR pii_detected = 1 )
+			ORDER BY id DESC
+			LIMIT %d",
+			cmgr_events_table(),
+			$host,
+			$host,
+			$source,
+			$source,
+			empty( $input['errors_only'] ) ? 0 : 1,
+			empty( $input['personal_data_only'] ) ? 0 : 1,
+			$limit
+		),
+		ARRAY_A
+	);
+
+	$requests = array();
+	foreach ( $rows as $row ) {
+		$pii_types  = json_decode( (string) $row['pii_types'], true );
+		$requests[] = array(
+			'time'                => cmgr_ability_time( $row['created_at'] ),
+			'source_plugin'       => $row['source_plugin'],
+			'host'                => $row['target_host'],
+			'url'                 => $row['target_url'],
+			'method'              => $row['method'],
+			'status'              => null === $row['response_status'] ? null : (int) $row['response_status'],
+			'duration_ms'         => (int) $row['duration_ms'],
+			'error'               => $row['error'] ? $row['error'] : null,
+			'personal_data_types' => is_array( $pii_types ) ? $pii_types : array(),
+		);
+	}
+
+	return array( 'requests' => $requests );
+}
+
+// ---------------------------------------------------------------------------
 // Privacy policy suggestion
 // ---------------------------------------------------------------------------
 

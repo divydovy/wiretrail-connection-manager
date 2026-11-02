@@ -18,6 +18,7 @@ Every plugin and theme on your site can quietly call out to third-party services
 * **Health**: request counts, error rates, and average latency per connection, with an alert when a service keeps failing.
 * **Personal data checks**: flags requests that contain email addresses, phone numbers, IP addresses, card numbers, or similar data, and alerts you when that data goes to a service that is not recognised or not expected to receive it.
 * **Settings > Connectors**: on WordPress 7.0 and later, detected connections also appear on the Connectors screen, marked as "Detected" so they are not confused with connections you set up yourself.
+* **AI agent access**: on WordPress 6.9 and later, issues, connections, and recent requests are available as read-only Abilities, so an AI assistant connected to your site can tell you what needs attention.
 
 Connections Manager only observes. It never blocks, changes, delays, or re-sends a request.
 
@@ -59,7 +60,11 @@ Yes. Add it under Tools > Connections > Settings > Ignored hosts. Developers can
 
 Use the `cmgr_known_services` filter to add hosts, display names, and whether each service is expected to receive personal data.
 
+= Can my AI assistant ask about connection problems? =
+
+Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities through the WordPress Abilities API: `connections-manager/get-issues` (alerts, failing connections, and slow connections), `connections-manager/list-connections`, and `connections-manager/get-recent-requests`. They are available over the REST API at `/wp-json/wp-abilities/v1/` and to MCP clients through the MCP Adapter. Only users who can manage options can run them, and they return the same redacted data shown on the Connections screen.
+
 == Changelog ==
 
 = 0.1.0 =
-* First release: detected connections, health, personal data checks, and the Connectors screen integration.
+* First release: detected connections, health, personal data checks, the Connectors screen integration, and read-only Abilities for AI agents.
