@@ -4,7 +4,7 @@ Tags: privacy, monitoring, http, integrations, gdpr
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -64,7 +64,17 @@ Use the `cmgr_known_services` filter to add hosts, display names, and whether ea
 
 Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities through the WordPress Abilities API: `connections-manager/get-issues` (alerts, failing connections, and slow connections), `connections-manager/list-connections`, and `connections-manager/get-recent-requests`. They are available over the REST API at `/wp-json/wp-abilities/v1/` and to MCP clients through the MCP Adapter. Only users who can manage options can run them, and they return the same redacted data shown on the Connections screen.
 
+== Screenshots ==
+
+1. Detected connections: every outbound service grouped by the plugin that called it, with health, latency, personal data checks, and alerts that need attention.
+2. Settings: turn recording on or off, choose how long records are kept, and ignore hosts.
+3. On WordPress 7.0 and later, detected connections also appear on Settings > Connectors.
+
 == Changelog ==
+
+= 0.2.1 =
+* Connections averaging 2 seconds or more are marked "slow" in the Health column.
+* Fix: requests to wordpress.org itself (the dashboard news feed) are no longer recorded.
 
 = 0.2.0 =
 * New: read-only Abilities (`get-issues`, `list-connections`, `get-recent-requests`) so AI agents can report connection problems. WordPress 6.9+.

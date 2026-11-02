@@ -3,7 +3,7 @@
  * Plugin Name:       Connections Manager
  * Plugin URI:        https://github.com/divydovy/connections-manager
  * Description:       See which plugins and themes on your site talk to which third-party services, how healthy those connections are, and whether personal data is being sent.
- * Version:           0.2.0
+ * Version:           0.2.1
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Author:            David Lockie
@@ -21,10 +21,11 @@ defined( 'ABSPATH' ) || exit;
 // Constants
 // ---------------------------------------------------------------------------
 
-define( 'CMGR_VERSION', '0.2.0' );
+define( 'CMGR_VERSION', '0.2.1' );
 define( 'CMGR_SCHEMA_VERSION', '1' );
 define( 'CMGR_PLUGIN_SLUG', basename( __DIR__ ) );
 define( 'CMGR_MAX_SCAN_SIZE', 10 * 1024 ); // Only the first 10 KB of a request body is scanned.
+define( 'CMGR_SLOW_REQUEST_MS', 2000 ); // Connections averaging at least this are reported as slow.
 
 // ---------------------------------------------------------------------------
 // Options
@@ -166,6 +167,7 @@ function cmgr_get_ignored_domains() {
 		// WordPress.org update and translation checks: high volume, always core.
 		'api.wordpress.org',
 		'downloads.wordpress.org',
+		'wordpress.org', // Dashboard news feed.
 		'*.wordpress.org',
 		// Loopback requests (cron, site health).
 		'localhost',
@@ -918,6 +920,8 @@ function cmgr_render_detected_integrations_table( $integrations ) {
 						<?php if ( (int) $integration['errors'] > 0 ) : ?>
 							<?php /* translators: %s: number of errors. */ ?>
 							<span class="cmgr-pill cmgr-pill-danger"><?php echo esc_html( sprintf( _n( '%s error', '%s errors', (int) $integration['errors'], 'connections-manager' ), number_format_i18n( $integration['errors'] ) ) ); ?></span>
+						<?php elseif ( (int) $integration['avg_latency'] >= CMGR_SLOW_REQUEST_MS ) : ?>
+							<span class="cmgr-pill cmgr-pill-warning"><?php esc_html_e( 'slow', 'connections-manager' ); ?></span>
 						<?php else : ?>
 							<span class="cmgr-pill cmgr-pill-success"><?php esc_html_e( 'healthy', 'connections-manager' ); ?></span>
 						<?php endif; ?>
@@ -1104,8 +1108,6 @@ function cmgr_get_connectors_page_module_data( $data ) {
 // ---------------------------------------------------------------------------
 // Abilities (agent access)
 // ---------------------------------------------------------------------------
-
-define( 'CMGR_SLOW_REQUEST_MS', 2000 );
 
 add_action( 'wp_abilities_api_categories_init', 'cmgr_register_ability_category' );
 
