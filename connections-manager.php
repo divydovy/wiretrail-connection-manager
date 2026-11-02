@@ -1,6 +1,7 @@
 <?php
 /**
  * Plugin Name:       Connections Manager
+ * Plugin URI:        https://github.com/divydovy/connections-manager
  * Description:       See which plugins and themes on your site talk to which third-party services, how healthy those connections are, and whether personal data is being sent.
  * Version:           0.2.0
  * Requires at least: 6.5
