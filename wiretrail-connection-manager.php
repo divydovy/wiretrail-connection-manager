@@ -1,16 +1,16 @@
 <?php
 /**
- * Plugin Name:       Connections Manager
- * Plugin URI:        https://github.com/divydovy/connections-manager
+ * Plugin Name:       Wiretrail Connection Manager
+ * Plugin URI:        https://github.com/divydovy/wiretrail-connection-manager
  * Description:       See which plugins and themes on your site talk to which third-party services, how healthy those connections are, and whether personal data is being sent.
- * Version:           0.2.1
+ * Version:           0.2.2
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Author:            David Lockie
  * Author URI:        https://profiles.wordpress.org/divydovy/
  * License:           GPLv2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       connections-manager
+ * Text Domain:       wiretrail-connection-manager
  *
  * @package ConnectionsManager
  */
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 // Constants
 // ---------------------------------------------------------------------------
 
-define( 'CMGR_VERSION', '0.2.1' );
+define( 'CMGR_VERSION', '0.2.2' );
 define( 'CMGR_SCHEMA_VERSION', '1' );
 define( 'CMGR_PLUGIN_SLUG', basename( __DIR__ ) );
 define( 'CMGR_MAX_SCAN_SIZE', 10 * 1024 ); // Only the first 10 KB of a request body is scanned.
@@ -66,12 +66,12 @@ function cmgr_sanitize_domain_lines( $value ) {
 
 function cmgr_events_table() {
 	global $wpdb;
-	return $wpdb->prefix . 'connections_manager_events';
+	return $wpdb->prefix . 'wiretrail_events';
 }
 
 function cmgr_alerts_table() {
 	global $wpdb;
-	return $wpdb->prefix . 'connections_manager_alerts';
+	return $wpdb->prefix . 'wiretrail_alerts';
 }
 
 function cmgr_create_tables() {
@@ -319,7 +319,6 @@ function cmgr_known_services() {
 		'ssapi.shipstation.com'    => array( 'name' => 'ShipStation', 'expects_pii' => true, 'category' => 'shipping' ),
 		'maps.googleapis.com'      => array( 'name' => 'Google Maps', 'expects_pii' => false, 'category' => 'mapping' ),
 		'www.google-analytics.com' => array( 'name' => 'Google Analytics', 'expects_pii' => false, 'category' => 'analytics' ),
-		'graph.facebook.com'       => array( 'name' => 'Meta Graph', 'expects_pii' => true, 'category' => 'advertising' ),
 		'public-api.wordpress.com' => array( 'name' => 'WordPress.com', 'expects_pii' => false, 'category' => 'platform' ),
 		'jetpack.wordpress.com'    => array( 'name' => 'Jetpack', 'expects_pii' => false, 'category' => 'platform' ),
 		'wordpress.com'            => array( 'name' => 'WordPress.com', 'expects_pii' => false, 'category' => 'platform' ),
@@ -567,12 +566,12 @@ function cmgr_detect_alerts_for_event( $event, $classification, $is_error ) {
 			$type     = 'pii_unknown_endpoint';
 			$severity = 'high';
 			/* translators: 1: plugin slug, 2: personal data types, 3: host name. */
-			$message = sprintf( __( "'%1\$s' sent personal data (%2\$s) to unrecognised host %3\$s", 'connections-manager' ), $source, $types, $host );
+			$message = sprintf( __( "'%1\$s' sent personal data (%2\$s) to unrecognised host %3\$s", 'wiretrail-connection-manager' ), $source, $types, $host );
 		} elseif ( empty( $host_info['expects_pii'] ) ) {
 			$type     = 'pii_unexpected';
 			$severity = 'medium';
 			/* translators: 1: plugin slug, 2: personal data types, 3: service name. */
-			$message = sprintf( __( "'%1\$s' sent personal data (%2\$s) to %3\$s", 'connections-manager' ), $source, $types, $host_info['name'] );
+			$message = sprintf( __( "'%1\$s' sent personal data (%2\$s) to %3\$s", 'wiretrail-connection-manager' ), $source, $types, $host_info['name'] );
 		}
 
 		if ( ! empty( $type ) && ! cmgr_has_recent_alert( $type, $host, $source, DAY_IN_SECONDS / MINUTE_IN_SECONDS ) ) {
@@ -605,7 +604,7 @@ function cmgr_detect_alerts_for_event( $event, $classification, $is_error ) {
 					'type'          => 'repeated_failures',
 					'severity'      => 'medium',
 					/* translators: 1: host name, 2: error count. */
-					'message'       => sprintf( __( '%1$s returned errors %2$d times in the last hour', 'connections-manager' ), $host, $recent_errors ),
+					'message'       => sprintf( __( '%1$s returned errors %2$d times in the last hour', 'wiretrail-connection-manager' ), $host, $recent_errors ),
 					'event_id'      => $event['event_id'],
 					'target_host'   => $host,
 					'source_plugin' => $source,
@@ -682,10 +681,10 @@ add_action( 'admin_menu', 'cmgr_add_settings_page' );
 
 function cmgr_add_settings_page() {
 	add_management_page(
-		__( 'Connections Manager', 'connections-manager' ),
-		__( 'Connections', 'connections-manager' ),
+		__( 'Wiretrail Connection Manager', 'wiretrail-connection-manager' ),
+		__( 'Connections', 'wiretrail-connection-manager' ),
 		'manage_options',
-		'connections-manager',
+		'wiretrail-connection-manager',
 		'cmgr_render_admin_page'
 	);
 }
@@ -693,7 +692,7 @@ function cmgr_add_settings_page() {
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'cmgr_plugin_action_links' );
 
 function cmgr_plugin_action_links( $links ) {
-	array_unshift( $links, '<a href="' . esc_url( cmgr_admin_url() ) . '">' . esc_html__( 'View connections', 'connections-manager' ) . '</a>' );
+	array_unshift( $links, '<a href="' . esc_url( cmgr_admin_url() ) . '">' . esc_html__( 'View connections', 'wiretrail-connection-manager' ) . '</a>' );
 	return $links;
 }
 
@@ -706,14 +705,14 @@ function cmgr_register_settings() {
 }
 
 function cmgr_admin_url( $tab = 'overview' ) {
-	return add_query_arg( 'tab', $tab, admin_url( 'tools.php?page=connections-manager' ) );
+	return add_query_arg( 'tab', $tab, admin_url( 'tools.php?page=wiretrail-connection-manager' ) );
 }
 
 add_action( 'admin_post_cmgr_clear_data', 'cmgr_handle_clear_data' );
 
 function cmgr_handle_clear_data() {
 	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You do not have permission to do that.', 'connections-manager' ) );
+		wp_die( esc_html__( 'You do not have permission to do that.', 'wiretrail-connection-manager' ) );
 	}
 
 	check_admin_referer( 'cmgr_clear_data' );
@@ -796,7 +795,7 @@ function cmgr_get_detected_connections_for_client() {
 			'piiCount'       => (int) $connection['pii'],
 			'lastSeen'       => $connection['last_seen'] ? get_date_from_gmt( $connection['last_seen'], 'Y-m-d H:i:s' ) : '',
 			'isKnown'        => ! empty( $host_info['known'] ),
-			'classification' => ! empty( $host_info['known'] ) ? __( 'Known provider', 'connections-manager' ) : __( 'Detected host', 'connections-manager' ),
+			'classification' => ! empty( $host_info['known'] ) ? __( 'Known provider', 'wiretrail-connection-manager' ) : __( 'Detected host', 'wiretrail-connection-manager' ),
 		);
 	}
 
@@ -849,12 +848,12 @@ function cmgr_render_admin_page() {
 
 	?>
 	<div class="wrap cmgr-admin">
-		<h1><?php esc_html_e( 'Connections Manager', 'connections-manager' ); ?></h1>
-		<p class="description"><?php esc_html_e( 'Outbound connections made by plugins, themes, and WordPress itself. Everything shown here is recorded and stored on this site only.', 'connections-manager' ); ?></p>
+		<h1><?php esc_html_e( 'Wiretrail Connection Manager', 'wiretrail-connection-manager' ); ?></h1>
+		<p class="description"><?php esc_html_e( 'Outbound connections made by plugins, themes, and WordPress itself. Everything shown here is recorded and stored on this site only.', 'wiretrail-connection-manager' ); ?></p>
 
 		<nav class="nav-tab-wrapper">
-			<a class="nav-tab <?php echo 'overview' === $tab ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( cmgr_admin_url( 'overview' ) ); ?>"><?php esc_html_e( 'Detected connections', 'connections-manager' ); ?></a>
-			<a class="nav-tab <?php echo 'settings' === $tab ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( cmgr_admin_url( 'settings' ) ); ?>"><?php esc_html_e( 'Settings', 'connections-manager' ); ?></a>
+			<a class="nav-tab <?php echo 'overview' === $tab ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( cmgr_admin_url( 'overview' ) ); ?>"><?php esc_html_e( 'Detected connections', 'wiretrail-connection-manager' ); ?></a>
+			<a class="nav-tab <?php echo 'settings' === $tab ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( cmgr_admin_url( 'settings' ) ); ?>"><?php esc_html_e( 'Settings', 'wiretrail-connection-manager' ); ?></a>
 		</nav>
 
 		<?php
@@ -871,14 +870,14 @@ function cmgr_render_admin_page() {
 add_action( 'admin_enqueue_scripts', 'cmgr_enqueue_admin_styles' );
 
 function cmgr_enqueue_admin_styles( $hook_suffix ) {
-	if ( 'tools_page_connections-manager' !== $hook_suffix ) {
+	if ( 'tools_page_wiretrail-connection-manager' !== $hook_suffix ) {
 		return;
 	}
 
-	wp_register_style( 'connections-manager-admin', false, array(), CMGR_VERSION );
-	wp_enqueue_style( 'connections-manager-admin' );
+	wp_register_style( 'wiretrail-connection-manager-admin', false, array(), CMGR_VERSION );
+	wp_enqueue_style( 'wiretrail-connection-manager-admin' );
 	wp_add_inline_style(
-		'connections-manager-admin',
+		'wiretrail-connection-manager-admin',
 		'.cmgr-admin .cmgr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0; }
 		.cmgr-admin .cmgr-card { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 14px; }
 		.cmgr-admin .cmgr-value { font-size: 26px; font-weight: 700; line-height: 1.2; }
@@ -897,18 +896,18 @@ function cmgr_render_detected_integrations_table( $integrations ) {
 	<table class="widefat striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Source', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Service host', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Requests', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Avg latency', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Health', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Personal data', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Last seen', 'connections-manager' ); ?></th>
+				<th><?php esc_html_e( 'Source', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Service host', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Requests', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Avg latency', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Health', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Personal data', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Last seen', 'wiretrail-connection-manager' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
 			<?php if ( ! $integrations ) : ?>
-				<tr><td colspan="7"><?php esc_html_e( 'No outbound connections recorded yet. They will appear here as plugins and themes make requests.', 'connections-manager' ); ?></td></tr>
+				<tr><td colspan="7"><?php esc_html_e( 'No outbound connections recorded yet. They will appear here as plugins and themes make requests.', 'wiretrail-connection-manager' ); ?></td></tr>
 			<?php endif; ?>
 			<?php foreach ( $integrations as $integration ) : ?>
 				<tr>
@@ -919,19 +918,19 @@ function cmgr_render_detected_integrations_table( $integrations ) {
 					<td>
 						<?php if ( (int) $integration['errors'] > 0 ) : ?>
 							<?php /* translators: %s: number of errors. */ ?>
-							<span class="cmgr-pill cmgr-pill-danger"><?php echo esc_html( sprintf( _n( '%s error', '%s errors', (int) $integration['errors'], 'connections-manager' ), number_format_i18n( $integration['errors'] ) ) ); ?></span>
+							<span class="cmgr-pill cmgr-pill-danger"><?php echo esc_html( sprintf( _n( '%s error', '%s errors', (int) $integration['errors'], 'wiretrail-connection-manager' ), number_format_i18n( $integration['errors'] ) ) ); ?></span>
 						<?php elseif ( (int) $integration['avg_latency'] >= CMGR_SLOW_REQUEST_MS ) : ?>
-							<span class="cmgr-pill cmgr-pill-warning"><?php esc_html_e( 'slow', 'connections-manager' ); ?></span>
+							<span class="cmgr-pill cmgr-pill-warning"><?php esc_html_e( 'slow', 'wiretrail-connection-manager' ); ?></span>
 						<?php else : ?>
-							<span class="cmgr-pill cmgr-pill-success"><?php esc_html_e( 'healthy', 'connections-manager' ); ?></span>
+							<span class="cmgr-pill cmgr-pill-success"><?php esc_html_e( 'healthy', 'wiretrail-connection-manager' ); ?></span>
 						<?php endif; ?>
 					</td>
 					<td>
 						<?php if ( (int) $integration['pii'] > 0 ) : ?>
 							<?php /* translators: %s: number of requests containing personal data. */ ?>
-							<span class="cmgr-pill cmgr-pill-warning"><?php echo esc_html( sprintf( _n( '%s request', '%s requests', (int) $integration['pii'], 'connections-manager' ), number_format_i18n( $integration['pii'] ) ) ); ?></span>
+							<span class="cmgr-pill cmgr-pill-warning"><?php echo esc_html( sprintf( _n( '%s request', '%s requests', (int) $integration['pii'], 'wiretrail-connection-manager' ), number_format_i18n( $integration['pii'] ) ) ); ?></span>
 						<?php else : ?>
-							<span class="cmgr-pill"><?php esc_html_e( 'none detected', 'connections-manager' ); ?></span>
+							<span class="cmgr-pill"><?php esc_html_e( 'none detected', 'wiretrail-connection-manager' ); ?></span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo esc_html( get_date_from_gmt( $integration['last_seen'], 'Y-m-d H:i:s' ) ); ?></td>
@@ -949,12 +948,12 @@ function cmgr_render_overview_tab() {
 	$alerts       = cmgr_get_recent_alerts();
 	?>
 	<?php if ( ! cmgr_is_enabled() ) : ?>
-		<div class="notice notice-warning inline"><p><?php esc_html_e( 'Recording is paused. Enable it in Settings to capture new connections.', 'connections-manager' ); ?></p></div>
+		<div class="notice notice-warning inline"><p><?php esc_html_e( 'Recording is paused. Enable it in Settings to capture new connections.', 'wiretrail-connection-manager' ); ?></p></div>
 	<?php endif; ?>
 
 	<?php if ( $alerts ) : ?>
 		<div class="cmgr-card cmgr-status">
-			<strong><?php esc_html_e( 'Needs attention:', 'connections-manager' ); ?></strong>
+			<strong><?php esc_html_e( 'Needs attention:', 'wiretrail-connection-manager' ); ?></strong>
 			<ul>
 				<?php foreach ( $alerts as $alert ) : ?>
 					<li><span class="cmgr-pill cmgr-pill-danger"><?php echo esc_html( $alert['severity'] ); ?></span> <?php echo esc_html( $alert['message'] ); ?></li>
@@ -966,12 +965,12 @@ function cmgr_render_overview_tab() {
 	<div class="cmgr-grid">
 		<?php
 		$cards = array(
-			__( 'Requests', 'connections-manager' )       => number_format_i18n( $stats['total'] ),
-			__( 'Sources', 'connections-manager' )        => number_format_i18n( $stats['plugins'] ),
-			__( 'Services', 'connections-manager' )       => number_format_i18n( $stats['services'] ),
-			__( 'Personal data', 'connections-manager' )  => number_format_i18n( $stats['pii'] ),
-			__( 'Errors', 'connections-manager' )         => number_format_i18n( $stats['errors'] ),
-			__( 'Avg latency', 'connections-manager' )    => $stats['avg_latency'] ? number_format_i18n( $stats['avg_latency'] ) . 'ms' : '-',
+			__( 'Requests', 'wiretrail-connection-manager' )       => number_format_i18n( $stats['total'] ),
+			__( 'Sources', 'wiretrail-connection-manager' )        => number_format_i18n( $stats['plugins'] ),
+			__( 'Services', 'wiretrail-connection-manager' )       => number_format_i18n( $stats['services'] ),
+			__( 'Personal data', 'wiretrail-connection-manager' )  => number_format_i18n( $stats['pii'] ),
+			__( 'Errors', 'wiretrail-connection-manager' )         => number_format_i18n( $stats['errors'] ),
+			__( 'Avg latency', 'wiretrail-connection-manager' )    => $stats['avg_latency'] ? number_format_i18n( $stats['avg_latency'] ) . 'ms' : '-',
 		);
 		foreach ( $cards as $label => $value ) :
 			?>
@@ -982,24 +981,24 @@ function cmgr_render_overview_tab() {
 		<?php endforeach; ?>
 	</div>
 
-	<h2><?php esc_html_e( 'Detected connections', 'connections-manager' ); ?></h2>
+	<h2><?php esc_html_e( 'Detected connections', 'wiretrail-connection-manager' ); ?></h2>
 	<?php cmgr_render_detected_integrations_table( $integrations ); ?>
 
-	<h2><?php esc_html_e( 'Recent activity', 'connections-manager' ); ?></h2>
+	<h2><?php esc_html_e( 'Recent activity', 'wiretrail-connection-manager' ); ?></h2>
 	<table class="widefat striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Time', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Source', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Service', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Method', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Status', 'connections-manager' ); ?></th>
-				<th><?php esc_html_e( 'Duration', 'connections-manager' ); ?></th>
+				<th><?php esc_html_e( 'Time', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Source', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Service', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Method', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Status', 'wiretrail-connection-manager' ); ?></th>
+				<th><?php esc_html_e( 'Duration', 'wiretrail-connection-manager' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
 			<?php if ( ! $events ) : ?>
-				<tr><td colspan="6"><?php esc_html_e( 'Waiting for traffic.', 'connections-manager' ); ?></td></tr>
+				<tr><td colspan="6"><?php esc_html_e( 'Waiting for traffic.', 'wiretrail-connection-manager' ); ?></td></tr>
 			<?php endif; ?>
 			<?php foreach ( $events as $event ) : ?>
 				<tr>
@@ -1009,7 +1008,7 @@ function cmgr_render_overview_tab() {
 					<td><?php echo esc_html( $event['method'] ); ?></td>
 					<td>
 						<?php if ( $event['is_error'] ) : ?>
-							<span class="cmgr-pill cmgr-pill-danger" title="<?php echo esc_attr( (string) $event['error'] ); ?>"><?php echo esc_html( $event['response_status'] ? $event['response_status'] : __( 'error', 'connections-manager' ) ); ?></span>
+							<span class="cmgr-pill cmgr-pill-danger" title="<?php echo esc_attr( (string) $event['error'] ); ?>"><?php echo esc_html( $event['response_status'] ? $event['response_status'] : __( 'error', 'wiretrail-connection-manager' ) ); ?></span>
 						<?php else : ?>
 							<?php echo esc_html( $event['response_status'] ? $event['response_status'] : 'n/a' ); ?>
 						<?php endif; ?>
@@ -1029,43 +1028,43 @@ function cmgr_render_settings_tab() {
 	?>
 	<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 	<?php if ( ! empty( $_GET['cleared'] ) ) : ?>
-		<div class="notice notice-success inline"><p><?php esc_html_e( 'All recorded connections and alerts were deleted.', 'connections-manager' ); ?></p></div>
+		<div class="notice notice-success inline"><p><?php esc_html_e( 'All recorded connections and alerts were deleted.', 'wiretrail-connection-manager' ); ?></p></div>
 	<?php endif; ?>
 
 	<form method="post" action="options.php">
 		<?php settings_fields( 'cmgr_settings' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Recording', 'connections-manager' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Recording', 'wiretrail-connection-manager' ); ?></th>
 				<td>
 					<input type="hidden" name="cmgr_enabled" value="0" />
-					<label><input type="checkbox" name="cmgr_enabled" value="1" <?php checked( $enabled ); ?> /> <?php esc_html_e( 'Record outbound connections made by this site', 'connections-manager' ); ?></label>
-					<p class="description"><?php esc_html_e( 'Records the destination, timing, and status of each request. Secrets and personal data are redacted from stored URLs, and request and response bodies are never stored. Nothing is sent off this site.', 'connections-manager' ); ?></p>
+					<label><input type="checkbox" name="cmgr_enabled" value="1" <?php checked( $enabled ); ?> /> <?php esc_html_e( 'Record outbound connections made by this site', 'wiretrail-connection-manager' ); ?></label>
+					<p class="description"><?php esc_html_e( 'Records the destination, timing, and status of each request. Secrets and personal data are redacted from stored URLs, and request and response bodies are never stored. Nothing is sent off this site.', 'wiretrail-connection-manager' ); ?></p>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Retention', 'connections-manager' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Retention', 'wiretrail-connection-manager' ); ?></th>
 				<td>
-					<input type="number" min="1" max="90" name="cmgr_retention_days" value="<?php echo esc_attr( $retention_days ); ?>" class="small-text" /> <?php esc_html_e( 'days', 'connections-manager' ); ?>
+					<input type="number" min="1" max="90" name="cmgr_retention_days" value="<?php echo esc_attr( $retention_days ); ?>" class="small-text" /> <?php esc_html_e( 'days', 'wiretrail-connection-manager' ); ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Ignored hosts', 'connections-manager' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Ignored hosts', 'wiretrail-connection-manager' ); ?></th>
 				<td>
 					<textarea name="cmgr_ignored_domains" rows="6" cols="50" class="large-text code"><?php echo esc_textarea( $ignored ); ?></textarea>
-					<p class="description"><?php esc_html_e( 'One host per line. Supports wildcards such as *.example.com.', 'connections-manager' ); ?></p>
-					<p class="description"><?php esc_html_e( 'Always ignored: WordPress.org update checks, requests to this site, and payment gateways (Stripe, PayPal, Braintree).', 'connections-manager' ); ?></p>
+					<p class="description"><?php esc_html_e( 'One host per line. Supports wildcards such as *.example.com.', 'wiretrail-connection-manager' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Always ignored: WordPress.org update checks, requests to this site, and payment gateways (Stripe, PayPal, Braintree).', 'wiretrail-connection-manager' ); ?></p>
 				</td>
 			</tr>
 		</table>
 		<?php submit_button(); ?>
 	</form>
 
-	<h2><?php esc_html_e( 'Delete recorded data', 'connections-manager' ); ?></h2>
+	<h2><?php esc_html_e( 'Delete recorded data', 'wiretrail-connection-manager' ); ?></h2>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="cmgr_clear_data" />
 		<?php wp_nonce_field( 'cmgr_clear_data' ); ?>
-		<?php submit_button( __( 'Delete all recorded connections', 'connections-manager' ), 'delete', 'submit', false ); ?>
+		<?php submit_button( __( 'Delete all recorded connections', 'wiretrail-connection-manager' ), 'delete', 'submit', false ); ?>
 	</form>
 	<?php
 }
@@ -1088,14 +1087,14 @@ function cmgr_enqueue_connectors_page_module( $hook_suffix ) {
 	}
 
 	wp_enqueue_script_module(
-		'connections-manager-connectors',
+		'wiretrail-connection-manager-connectors',
 		plugins_url( 'assets/connections-page.js', __FILE__ ),
 		array( '@wordpress/connectors' ),
 		CMGR_VERSION
 	);
 }
 
-add_filter( 'script_module_data_connections-manager-connectors', 'cmgr_get_connectors_page_module_data' );
+add_filter( 'script_module_data_wiretrail-connection-manager-connectors', 'cmgr_get_connectors_page_module_data' );
 
 function cmgr_get_connectors_page_module_data( $data ) {
 	$data['connections'] = cmgr_get_detected_connections_for_client();
@@ -1117,10 +1116,10 @@ function cmgr_register_ability_category() {
 	}
 
 	wp_register_ability_category(
-		'connections-manager',
+		'wiretrail',
 		array(
-			'label'       => __( 'Connections Manager', 'connections-manager' ),
-			'description' => __( 'Outbound connections made by plugins, themes, and WordPress to third-party services.', 'connections-manager' ),
+			'label'       => __( 'Wiretrail Connection Manager', 'wiretrail-connection-manager' ),
+			'description' => __( 'Outbound connections made by plugins, themes, and WordPress to third-party services.', 'wiretrail-connection-manager' ),
 		)
 	);
 }
@@ -1147,15 +1146,15 @@ function cmgr_register_abilities() {
 		'minimum'     => 1,
 		'maximum'     => 24 * 30,
 		'default'     => 24,
-		'description' => __( 'How many hours back to look.', 'connections-manager' ),
+		'description' => __( 'How many hours back to look.', 'wiretrail-connection-manager' ),
 	);
 
 	wp_register_ability(
-		'connections-manager/get-issues',
+		'wiretrail/get-issues',
 		array(
-			'label'               => __( 'Get connection issues', 'connections-manager' ),
-			'description'         => __( 'Reports what needs attention in this site\'s outbound connections to third-party services: unacknowledged alerts (personal data sent to unrecognised or unexpected services, repeated failures), connections that returned errors, and connections that were slow. Use this to answer "is anything wrong with my integrations?" or "is any plugin leaking personal data?".', 'connections-manager' ),
-			'category'            => 'connections-manager',
+			'label'               => __( 'Get connection issues', 'wiretrail-connection-manager' ),
+			'description'         => __( 'Reports what needs attention in this site\'s outbound connections to third-party services: unacknowledged alerts (personal data sent to unrecognised or unexpected services, repeated failures), connections that returned errors, and connections that were slow. Use this to answer "is anything wrong with my integrations?" or "is any plugin leaking personal data?".', 'wiretrail-connection-manager' ),
+			'category'            => 'wiretrail',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
@@ -1185,21 +1184,21 @@ function cmgr_register_abilities() {
 	);
 
 	wp_register_ability(
-		'connections-manager/list-connections',
+		'wiretrail/list-connections',
 		array(
-			'label'               => __( 'List detected connections', 'connections-manager' ),
-			'description'         => __( 'Lists every third-party service this site has talked to within the retention period, grouped by the plugin or theme that made the requests, with request counts, errors, average latency, and how many requests contained personal data. Source "wp-core" means WordPress itself or code outside a plugin or theme directory.', 'connections-manager' ),
-			'category'            => 'connections-manager',
+			'label'               => __( 'List detected connections', 'wiretrail-connection-manager' ),
+			'description'         => __( 'Lists every third-party service this site has talked to within the retention period, grouped by the plugin or theme that made the requests, with request counts, errors, average latency, and how many requests contained personal data. Source "wp-core" means WordPress itself or code outside a plugin or theme directory.', 'wiretrail-connection-manager' ),
+			'category'            => 'wiretrail',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
 					'source_plugin' => array(
 						'type'        => 'string',
-						'description' => __( 'Only include connections made by this plugin or theme slug.', 'connections-manager' ),
+						'description' => __( 'Only include connections made by this plugin or theme slug.', 'wiretrail-connection-manager' ),
 					),
 					'host'          => array(
 						'type'        => 'string',
-						'description' => __( 'Only include connections to this host.', 'connections-manager' ),
+						'description' => __( 'Only include connections to this host.', 'wiretrail-connection-manager' ),
 					),
 				),
 				'additionalProperties' => false,
@@ -1218,21 +1217,21 @@ function cmgr_register_abilities() {
 	);
 
 	wp_register_ability(
-		'connections-manager/get-recent-requests',
+		'wiretrail/get-recent-requests',
 		array(
-			'label'               => __( 'Get recent outbound requests', 'connections-manager' ),
-			'description'         => __( 'Returns individual recent outbound requests, newest first, with status, timing, error message, and the types of personal data detected. URLs have secrets and personal data redacted. Use this to dig into a failing or suspicious connection found by get-issues.', 'connections-manager' ),
-			'category'            => 'connections-manager',
+			'label'               => __( 'Get recent outbound requests', 'wiretrail-connection-manager' ),
+			'description'         => __( 'Returns individual recent outbound requests, newest first, with status, timing, error message, and the types of personal data detected. URLs have secrets and personal data redacted. Use this to dig into a failing or suspicious connection found by get-issues.', 'wiretrail-connection-manager' ),
+			'category'            => 'wiretrail',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
 					'host'               => array(
 						'type'        => 'string',
-						'description' => __( 'Only include requests to this host.', 'connections-manager' ),
+						'description' => __( 'Only include requests to this host.', 'wiretrail-connection-manager' ),
 					),
 					'source_plugin'      => array(
 						'type'        => 'string',
-						'description' => __( 'Only include requests made by this plugin or theme slug.', 'connections-manager' ),
+						'description' => __( 'Only include requests made by this plugin or theme slug.', 'wiretrail-connection-manager' ),
 					),
 					'errors_only'        => array(
 						'type'    => 'boolean',
@@ -1480,10 +1479,10 @@ function cmgr_add_privacy_policy_content() {
 	}
 
 	wp_add_privacy_policy_content(
-		__( 'Connections Manager', 'connections-manager' ),
+		__( 'Wiretrail Connection Manager', 'wiretrail-connection-manager' ),
 		wp_kses_post(
 			wpautop(
-				__( 'This site records metadata about outbound requests its plugins and themes make to third-party services (destination, timing, status, and whether personal data appeared in the request). Personal data and secrets are redacted before anything is stored, request and response bodies are not stored, and the records stay in this site\'s database and are not sent anywhere. Records are deleted automatically after the configured retention period.', 'connections-manager' )
+				__( 'This site records metadata about outbound requests its plugins and themes make to third-party services (destination, timing, status, and whether personal data appeared in the request). Personal data and secrets are redacted before anything is stored, request and response bodies are not stored, and the records stay in this site\'s database and are not sent anywhere. Records are deleted automatically after the configured retention period.', 'wiretrail-connection-manager' )
 			)
 		)
 	);
@@ -1515,8 +1514,8 @@ function cmgr_show_activation_notice() {
 	?>
 	<div class="notice notice-info is-dismissible">
 		<p>
-			<?php esc_html_e( 'Connections Manager is now recording outbound connections. Data stays on this site.', 'connections-manager' ); ?>
-			<a href="<?php echo esc_url( cmgr_admin_url() ); ?>"><?php esc_html_e( 'View connections', 'connections-manager' ); ?></a>
+			<?php esc_html_e( 'Wiretrail Connection Manager is now recording outbound connections. Data stays on this site.', 'wiretrail-connection-manager' ); ?>
+			<a href="<?php echo esc_url( cmgr_admin_url() ); ?>"><?php esc_html_e( 'View connections', 'wiretrail-connection-manager' ); ?></a>
 		</p>
 	</div>
 	<?php

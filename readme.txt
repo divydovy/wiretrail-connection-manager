@@ -1,10 +1,10 @@
-=== Connections Manager ===
+=== Wiretrail Connection Manager ===
 Contributors: divydovy
 Tags: privacy, monitoring, http, integrations, gdpr
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ See which plugins and themes talk to which third-party services, how healthy tho
 
 == Description ==
 
-Every plugin and theme on your site can quietly call out to third-party services: email marketing, shipping, analytics, licensing servers, and more. Connections Manager shows you what is actually happening.
+Every plugin and theme on your site can quietly call out to third-party services: email marketing, shipping, analytics, licensing servers, and more. Wiretrail Connection Manager shows you what is actually happening.
 
 * **Detected connections**: every outbound service your site talks to, grouped by the plugin or theme that made the request.
 * **Health**: request counts, error rates, and average latency per connection, with an alert when a service keeps failing.
@@ -20,17 +20,23 @@ Every plugin and theme on your site can quietly call out to third-party services
 * **Settings > Connectors**: on WordPress 7.0 and later, detected connections also appear on the Connectors screen, marked as "Detected" so they are not confused with connections you set up yourself.
 * **AI agent access**: on WordPress 6.9 and later, issues, connections, and recent requests are available as read-only Abilities, so an AI assistant connected to your site can tell you what needs attention.
 
-Connections Manager only observes. It never blocks, changes, delays, or re-sends a request.
+Wiretrail Connection Manager only observes. It never blocks, changes, delays, or re-sends a request.
 
 = Privacy =
 
-Connections Manager does not send any data off your site and does not contact any external service.
+Wiretrail Connection Manager does not send any data off your site and does not contact any external service.
 
 For each outbound request it stores the destination host, the URL (with secrets and personal data redacted), the HTTP method, response status and size, timing, and which plugin or theme made the request. Request bodies are scanned in memory for personal data, but only the type of data found is stored. Request and response bodies are never stored.
 
 Records are kept in your site's database and deleted automatically after the retention period you choose (7 days by default). You can delete all records at any time from Tools > Connections > Settings. Deleting the plugin removes its tables and options.
 
 Requests to WordPress.org, to your own site, and to the Stripe, PayPal, and Braintree payment gateways are not recorded.
+
+== External services ==
+
+This plugin does not connect to any external service. It makes no outbound requests of its own and sends no data off your site.
+
+The code contains the host names of some well-known services (for example api.stripe.com or maps.googleapis.com). They are only used to recognise and label requests that other plugins and themes on your site make, or to skip recording them. The plugin never contacts those hosts.
 
 == Installation ==
 
@@ -62,7 +68,7 @@ Use the `cmgr_known_services` filter to add hosts, display names, and whether ea
 
 = Can my AI assistant ask about connection problems? =
 
-Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities through the WordPress Abilities API: `connections-manager/get-issues` (alerts, failing connections, and slow connections), `connections-manager/list-connections`, and `connections-manager/get-recent-requests`. They are available over the REST API at `/wp-json/wp-abilities/v1/` and to MCP clients through the MCP Adapter. Only users who can manage options can run them, and they return the same redacted data shown on the Connections screen.
+Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities through the WordPress Abilities API: `wiretrail/get-issues` (alerts, failing connections, and slow connections), `wiretrail/list-connections`, and `wiretrail/get-recent-requests`. They are available over the REST API at `/wp-json/wp-abilities/v1/` and to MCP clients through the MCP Adapter. Only users who can manage options can run them, and they return the same redacted data shown on the Connections screen.
 
 == Screenshots ==
 
@@ -71,6 +77,10 @@ Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities 
 3. On WordPress 7.0 and later, detected connections also appear on Settings > Connectors.
 
 == Changelog ==
+
+= 0.2.2 =
+* Renamed to Wiretrail Connection Manager (slug `wiretrail-connection-manager`). Abilities are now `wiretrail/get-issues`, `wiretrail/list-connections`, and `wiretrail/get-recent-requests`.
+* Documented that the plugin uses no external services.
 
 = 0.2.1 =
 * Connections averaging 2 seconds or more are marked "slow" in the Health column.
