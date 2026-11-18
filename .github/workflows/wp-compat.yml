@@ -1,0 +1,86 @@
+name: WP compatibility
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Mondays 07:00 UTC
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    name: WP ${{ matrix.wp }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        wp: [latest, trunk]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Write wp-env config
+        run: |
+          CORE=null
+          [ "${{ matrix.wp }}" = "trunk" ] && CORE='"WordPress/WordPress#master"'
+          cat > .wp-env.json <<JSON
+          {"core": $CORE, "phpVersion": "8.3", "plugins": ["."],
+           "config": {"WP_DEBUG": true, "WP_DEBUG_LOG": true, "WP_DEBUG_DISPLAY": false}}
+          JSON
+      - run: npx --yes @wordpress/env start
+      - name: Activate plugin and load key pages
+        run: |
+          SLUG=$(basename "$GITHUB_REPOSITORY")
+          npx @wordpress/env run cli wp core version
+          PLUGIN=$(npx @wordpress/env run cli wp plugin list --status=inactive --field=name | grep -v -E '^(akismet|hello)' | head -1)
+          npx @wordpress/env run cli wp plugin activate "$PLUGIN"
+          for u in / /wp-login.php /wp-admin/ /wp-admin/plugins.php /wp-admin/options-general.php; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8888$u"); echo "$u -> $code"
+            case "$code" in 5*) echo "::error::$u returned $code"; exit 1;; esac
+          done
+          npx @wordpress/env run cli wp plugin deactivate "$PLUGIN"
+          npx @wordpress/env run cli wp plugin activate "$PLUGIN"
+      - name: Fail on PHP errors/deprecations from the plugin
+        run: |
+          npx @wordpress/env run cli sh -c 'cat wp-content/debug.log 2>/dev/null || true' | tee debug.log
+          if grep -E 'PHP (Fatal|Warning|Notice|Deprecated|Parse)' debug.log; then exit 1; fi
+      - name: Plugin Check
+        if: matrix.wp == 'latest'
+        uses: WordPress/plugin-check-action@v1
+        with:
+          exclude-checks: 'plugin_updater'
+
+  tested-up-to:
+    name: readme "Tested up to" is current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare to latest WP
+        run: |
+          LATEST=$(curl -s https://api.wordpress.org/core/version-check/1.7/ | python3 -c 'import sys,json;print(json.load(sys.stdin)["offers"][0]["version"])')
+          LATEST_MM=$(echo "$LATEST" | cut -d. -f1,2)
+          TESTED=$(grep -i '^Tested up to:' readme.txt | head -1 | sed 's/.*: *//' | tr -d '\r')
+          echo "latest=$LATEST tested=$TESTED"
+          [ "$TESTED" = "$LATEST_MM" ] || { echo "::warning::Tested up to $TESTED, WP latest is $LATEST"; echo "STALE=1" >> $GITHUB_ENV; echo "LATEST=$LATEST" >> $GITHUB_ENV; echo "TESTED=$TESTED" >> $GITHUB_ENV; }
+      - name: Open issue if stale (scheduled runs only)
+        if: env.STALE == '1' && github.event_name == 'schedule'
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh issue list --label wp-compat --state open --json number --jq length | grep -q '^0$' || exit 0
+          gh label create wp-compat --color 0075ca 2>/dev/null || true
+          gh issue create --label wp-compat --title "Bump Tested up to: WP $LATEST is out (readme says $TESTED)" \
+            --body "Smoke job passed on latest. Bump readme.txt Tested up to, add changelog line, release. See the WP compatibility workflow run."
+
+  notify-failure:
+    needs: [smoke, tested-up-to]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    env: { GH_TOKEN: '${{ github.token }}' }
+    steps:
+      - run: |
+          gh label create wp-compat --color 0075ca --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh issue create --repo "$GITHUB_REPOSITORY" --label wp-compat --title "WP compatibility check FAILED $(date +%F)" \
+            --body "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
