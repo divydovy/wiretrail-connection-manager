@@ -35,8 +35,9 @@ jobs:
         run: |
           SLUG=$(basename "$GITHUB_REPOSITORY")
           npx @wordpress/env run cli wp core version
-          PLUGIN=$(npx @wordpress/env run cli wp plugin list --status=inactive --field=name | grep -v -E '^(akismet|hello)' | head -1)
-          npx @wordpress/env run cli wp plugin activate "$PLUGIN"
+          PLUGIN="$SLUG"
+          npx @wordpress/env run cli wp plugin list
+          npx @wordpress/env run cli wp plugin is-active "$PLUGIN"
           for u in / /wp-login.php /wp-admin/ /wp-admin/plugins.php /wp-admin/options-general.php; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8888$u"); echo "$u -> $code"
             case "$code" in 5*) echo "::error::$u returned $code"; exit 1;; esac
