@@ -53,6 +53,8 @@ jobs:
         uses: WordPress/plugin-check-action@v1
         with:
           exclude-checks: 'plugin_updater'
+          exclude-directories: '.github'
+          exclude-files: '.wp-env.json'
 
   tested-up-to:
     name: readme "Tested up to" is current
